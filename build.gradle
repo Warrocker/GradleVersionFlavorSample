@@ -1,0 +1,120 @@
+buildscript {
+    repositories {
+        //...
+    }
+
+    dependencies {
+        //...
+    }
+}
+
+repositories {
+    //...
+}
+
+android {
+    compileSdkVersion 28
+    buildToolsVersion '27.0.3'
+    flavorDimensions "tier"
+    defaultConfig {
+        applicationId "com.warrocker.sample"
+        minSdkVersion 19
+        targetSdkVersion 28
+    }
+    buildTypes {
+        release {
+            //...
+        }
+    }
+    productFlavors {
+        first {
+            def code = getCurrentVersionCode("first")
+            dimension "tier"
+            versionCode code
+            versionName "1.0." + code
+        }
+        second {
+            def code = getCurrentVersionCode("second")
+            dimension "tier"
+            versionCode code
+            versionName "1.0." + code
+        }
+        third {
+            def code = getCurrentVersionCode("third")
+            dimension "tier"
+            versionCode code
+            versionName "1.0." + code
+        }
+        // non-minor versions update manually
+    }
+    compileOptions {
+        //...
+    }
+
+    // Call when build assembled
+    increaseVersionCode()
+}
+
+dependencies {
+    // ...
+}
+
+def increaseVersionCode() {
+    gradle.taskGraph.whenReady { taskGraph ->
+        def isFirstTask = false
+        def isSecondTask = false
+        def isThirdTask = false
+        try {
+            isFirstTask = taskGraph.hasTask(assembleFirstRelease)
+            isSecondTask = taskGraph.hasTask(assembleSecondRelease)
+            isThirdTask = taskGraph.hasTask(assembleThirdRelease)
+        } catch (Exception ignore){
+            // Supress exception because gradle can't find release tasks if choosed debug flavor
+        }
+        if (isFirstTask ||
+                isSecondTask ||
+                isThirdTask) {
+            def versionPropsFile = file('version.properties')
+            if (versionPropsFile.canRead()) {
+                Properties versionProps = new Properties()
+
+                versionProps.load(new FileInputStream(versionPropsFile))
+                if (isFirstTask) {
+                    def code = versionProps['FIRST_VERSION_CODE'].toInteger() + 1
+                    versionProps['FIRST_VERSION_CODE'] = code.toString()
+                } else if (isSecondTask) {
+                    def code = versionProps['SECOND_VERSION_CODE'].toInteger() + 1
+                    versionProps['SECOND_VERSION_CODE'] = code.toString()
+                } else if (isThirdTask) {
+                    def code = versionProps['THIRD_VERSION_CODE'].toInteger() + 1
+                    versionProps['THIRD_VERSION_CODE'] = code.toString()
+                }
+                versionProps.store(versionPropsFile.newWriter(), null)
+            } else {
+                throw new GradleException("Could not read version.properties!")
+            }
+        }
+    }
+}
+
+def getCurrentVersionCode(build) {
+    def versionPropsFile = file('version.properties')
+    if (versionPropsFile.canRead()) {
+        Properties versionProps = new Properties()
+        versionProps.load(new FileInputStream(versionPropsFile))
+        def isFirstTask = build == "first"
+        def isSecondTask = build == "second"
+        def isThirdTask = build == "third"
+        def code
+        if (isFirstTask) {
+            code = versionProps['FIRST_VERSION_CODE'].toInteger()
+        } else if (isSecondTask) {
+            code = versionProps['SECOND_VERSION_CODE'].toInteger()
+        } else if (isThirdTask) {
+            code = versionProps['THIRD_VERSION_CODE'].toInteger()
+        }
+        return code
+    } else {
+        throw new GradleException("Could not read version.properties!")
+    }
+}
